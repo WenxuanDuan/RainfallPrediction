@@ -1,6 +1,6 @@
 /eda_outputs
 .DS_Store
-/cv_rf_y8
+/cv_results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,25 +1,24 @@
 import pandas as pd
 import numpy as np
-from data_preprocessing import preprocess_weather_data
+from data_preprocessing import preprocess_weather_data_binary
 
+# 原始数据读取
 df = pd.read_csv("data/hongkong.csv")
-X, y8, y9, y10 = preprocess_weather_data(df)
+X, y = preprocess_weather_data_binary(df)
 
 print("X shape:", X.shape)
-print("y8 class counts:", np.unique(y8, return_counts=True))
-print("y9 class counts:", np.unique(y9, return_counts=True))
-print("y10 class counts:", np.unique(y10, return_counts=True))
+print("y class counts:", np.unique(y, return_counts=True))
 
 # 路径
-X_path = "data/processed_X.csv"
-Y_path = "data/processed_Y.csv"
+X_path = "data/processed_X_binary.csv"
+Y_path = "data/processed_y_binary.csv"
 
 # 读取
 X = pd.read_csv(X_path)
 Y = pd.read_csv(Y_path)
 
 # ======= 基本信息 =======
-print("🔎 X shape:", X.shape)
+print("\n🔎 X shape:", X.shape)
 print("🔎 Y shape:", Y.shape)
 print("\n📌 Columns in Y:", Y.columns.tolist())
 
@@ -42,5 +41,5 @@ else:
 print("\n🧪 First row of X:")
 print(X.iloc[0, :10])  # 只显示前10个特征
 
-print("\n🧪 Corresponding labels:")
+print("\n🧪 Corresponding label:")
 print(Y.iloc[0])

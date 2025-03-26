@@ -1,92 +1,95 @@
-import numpy as np
 import os
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    classification_report, confusion_matrix
-)
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.base import clone
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, classification_report, roc_auc_score, roc_curve
+)
+from model_factory import build_model
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
-def plot_confusion_matrix(cm, labels, title, save_path):
+def plot_confusion_matrix(cm, class_names, output_path):
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
-    plt.title(title)
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
     plt.xlabel("Predicted")
     plt.ylabel("True")
-    plt.tight_layout()
-    plt.savefig(save_path)
+    plt.title("Average Confusion Matrix")
+    plt.savefig(output_path)
     plt.close()
 
 
-def evaluate_model_cv(X, y, model=None, n_splits=3, label_names=None, output_dir="cv_results", verbose=True):
+def plot_roc_curve(fpr, tpr, auc, model_name, output_path):
+    plt.figure()
+    plt.plot(fpr, tpr, label=f"{model_name} (AUC = {auc:.4f})")
+    plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve")
+    plt.legend(loc="lower right")
+    plt.savefig(output_path)
+    plt.close()
+
+
+def run_cross_validation(model_name, X, y, output_dir="cv_results", n_splits=5):
     os.makedirs(output_dir, exist_ok=True)
 
-    fold_size = len(X) // (n_splits + 1)
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
 
+    all_y_true = []
+    all_y_pred = []
+    all_y_prob = []
     all_metrics = []
-    all_cm = np.zeros((len(np.unique(y)), len(np.unique(y))), dtype=int)
+    cms = []
 
-    if model is None:
-        model = RandomForestClassifier(random_state=42)
+    print(f"\n🔍 Testing model: {model_name}")
 
-    for i in range(n_splits):
-        train_end = fold_size * (i + 1)
-        val_end = fold_size * (i + 2)
+    for fold, (train_index, val_index) in enumerate(skf.split(X, y), 1):
+        print(f"🔁 Fold {fold}")
+        X_train, X_val = X[train_index], X[val_index]
+        y_train, y_val = y[train_index], y[val_index]
 
-        X_train, X_val = X[:train_end], X[train_end:val_end]
-        y_train, y_val = y[:train_end], y[train_end:val_end]
+        model = build_model(model_name)
+        model.fit(X_train, y_train)
 
-        clf = clone(model)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict(X_val)
+        y_pred = model.predict(X_val)
+        y_prob = model.predict_proba(X_val)[:, 1] if hasattr(model, "predict_proba") else y_pred
 
         acc = accuracy_score(y_val, y_pred)
-        prec = precision_score(y_val, y_pred, average='macro', zero_division=0)
-        rec = recall_score(y_val, y_pred, average='macro', zero_division=0)
-        f1 = f1_score(y_val, y_pred, average='macro', zero_division=0)
+        prec = precision_score(y_val, y_pred)
+        rec = recall_score(y_val, y_pred)
+        f1 = f1_score(y_val, y_pred)
+        auc = roc_auc_score(y_val, y_prob)
 
-        fold_cm = confusion_matrix(y_val, y_pred, labels=np.unique(y))
-        all_cm += fold_cm
+        print(f"  Fold {fold}: Acc={acc:.4f}, Prec={prec:.4f}, Rec={rec:.4f}, F1={f1:.4f}, AUC={auc:.4f}")
 
-        metrics = {
-            'fold': i + 1,
-            'accuracy': acc,
-            'precision': prec,
-            'recall': rec,
-            'f1_macro': f1
-        }
-        all_metrics.append(metrics)
-
-        # Save confusion matrix plot
-        cm_path = os.path.join(output_dir, f"confusion_matrix_fold_{i+1}.png")
-        plot_confusion_matrix(fold_cm, label_names, f"Fold {i+1} Confusion Matrix", cm_path)
-
-        if verbose:
-            print(f"\n📦 Fold {i+1} Results:")
-            print(f"Accuracy: {acc:.4f}, Precision: {prec:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
-            print(classification_report(y_val, y_pred, target_names=label_names, digits=3))
+        all_y_true.extend(y_val)
+        all_y_pred.extend(y_pred)
+        all_y_prob.extend(y_prob)
+        all_metrics.append((acc, prec, rec, f1, auc))
+        cms.append(confusion_matrix(y_val, y_pred))
 
     # === 平均指标 ===
-    avg_metrics = {
-        'accuracy': np.mean([m['accuracy'] for m in all_metrics]),
-        'precision': np.mean([m['precision'] for m in all_metrics]),
-        'recall': np.mean([m['recall'] for m in all_metrics]),
-        'f1_macro': np.mean([m['f1_macro'] for m in all_metrics])
-    }
+    metrics_avg = np.mean(all_metrics, axis=0)
+    print("✅ Average Metrics Across All Folds:")
+    print(f"Accuracy: {metrics_avg[0]:.4f}")
+    print(f"Precision: {metrics_avg[1]:.4f}")
+    print(f"Recall: {metrics_avg[2]:.4f}")
+    print(f"F1: {metrics_avg[3]:.4f}")
+    print(f"AUC: {metrics_avg[4]:.4f}")
 
-    print("\n✅ Average Metrics Across All Folds:")
-    for k, v in avg_metrics.items():
-        print(f"{k.capitalize()}: {v:.4f}")
+    # === 混淆矩阵 ===
+    cm_avg = np.mean(cms, axis=0).astype(int)
+    class_names = ["No Rain", "Rain"]
+    cm_path = os.path.join(output_dir, f"confusion_matrix_{model_name}.png")
+    plot_confusion_matrix(cm_avg, class_names, cm_path)
 
-    # === 平均 confusion matrix 可视化 ===
-    cm_avg_path = os.path.join(output_dir, f"confusion_matrix_avg.png")
-    plot_confusion_matrix(all_cm, label_names, "Average Confusion Matrix", cm_avg_path)
-
-    return {
-        'fold_metrics': all_metrics,
-        'avg_metrics': avg_metrics,
-        'confusion_matrix': all_cm
-    }
+    # === ROC Curve ===
+    fpr, tpr, _ = roc_curve(all_y_true, all_y_prob)
+    roc_path = os.path.join(output_dir, f"roc_curve_{model_name}.png")
+    plot_roc_curve(fpr, tpr, metrics_avg[4], model_name, roc_path)

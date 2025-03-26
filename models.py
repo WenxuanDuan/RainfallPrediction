@@ -1,19 +1,20 @@
 import pandas as pd
 import numpy as np
-from data_preprocessing import preprocess_weather_data
+from cross_validation import run_cross_validation
 
-from cross_validation import evaluate_model_cv
-from sklearn.ensemble import RandomForestClassifier
+# 读取数据
+X = pd.read_csv("data/processed_X_binary.csv").values
+y = pd.read_csv("data/processed_y_binary.csv")["y_binary"].values
 
-label_names = ['No Rain', 'Drizzle', 'Light', 'Moderate', 'Heavy']
+# 要测试的模型列表
+models = ["XGB", "LOGREG", "RF", "LGBM", "CATBOOST", "MLP"]
 
-df = pd.read_csv("data/hongkong.csv")
-X, y8, y9, y10 = preprocess_weather_data(df)
-
-results = evaluate_model_cv(
-    X, y8,
-    model=RandomForestClassifier(random_state=42),
-    n_splits=3,
-    label_names=label_names,
-    output_dir="cv_rf_y8"
-)
+# 循环测试
+for model_name in models:
+    print(f"\n🔍 Testing model: {model_name}")
+    run_cross_validation(
+        model_name=model_name,
+        X=X,
+        y=y,
+        output_dir="cv_results",
+    )
