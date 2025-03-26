@@ -1,6 +1,7 @@
 /eda_outputs
 .DS_Store
 /cv_results
+/catboost_info
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
