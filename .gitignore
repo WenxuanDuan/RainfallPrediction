@@ -2,6 +2,7 @@
 .DS_Store
 /cv_results
 /catboost_info
+/pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

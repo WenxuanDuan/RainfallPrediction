@@ -75,5 +75,5 @@ def hyperparameter_tuning(model_name, X, y, param_grid, n_splits=5):
 # Example usage:
 # Assuming X and y are loaded data and labels
 # Run hyperparameter tuning for different models
-for model_name in ['XGB', 'LOGREG', 'RF']:
+for model_name in ['XGB', 'LOGREG', 'RF', 'CATBOOST', 'MLP']:
     hyperparameter_tuning(model_name, X, y, param_grid)
