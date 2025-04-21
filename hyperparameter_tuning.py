@@ -47,6 +47,32 @@ param_grid = {
         'max_iter': [500, 1000],
         'activation': ['relu', 'tanh'],
         'alpha': [0.0001, 0.001]
+    },
+    'GBM': {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'max_depth': [3, 5, 7]
+    },
+    'ADA': {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.5, 1.0, 2.0]
+    },
+    'SVM': {
+        'C': [0.1, 1, 10],
+        'kernel': ['linear', 'rbf'],
+        'gamma': ['scale', 'auto']
+    },
+    'KNN': {
+        'n_neighbors': [3, 5, 7, 9],
+        'weights': ['uniform', 'distance'],
+        'metric': ['euclidean', 'manhattan']
+    },
+    'NB': {
+        'var_smoothing': [1e-9, 1e-8, 1e-7]
+    },
+    'ElasticNet': {
+        'alpha': [0.1, 0.5, 1.0],
+        'l1_ratio': [0.1, 0.5, 0.9, 1.0]
     }
 }
 
@@ -66,14 +92,21 @@ def hyperparameter_tuning(model_name, X, y, param_grid, n_splits=5):
     # Get the best model and evaluate on the entire dataset
     best_model = grid_search.best_estimator_
     y_pred = best_model.predict(X)
-    y_prob = best_model.predict_proba(X)[:, 1]
 
-    print(f"Best {model_name} Accuracy: {accuracy_score(y, y_pred):.4f}")
-    print(f"Best {model_name} AUC: {roc_auc_score(y, y_prob):.4f}")
+    # For ElasticNet, treat the predicted values as probabilities
+    y_pred_binary = (y_pred > 0.5).astype(int)  # Convert to binary predictions (0 or 1)
+
+    print(f"Best {model_name} Accuracy: {accuracy_score(y, y_pred_binary):.4f}")
+    print(f"Best {model_name} AUC: {roc_auc_score(y, y_pred):.4f}")  # AUC using continuous predictions
 
 
 # Example usage:
 # Assuming X and y are loaded data and labels
 # Run hyperparameter tuning for different models
-for model_name in ['XGB', 'LOGREG', 'RF', 'CATBOOST', 'MLP']:
+# for model_name in ['XGB', 'LOGREG', 'RF', 'CATBOOST', 'MLP']:
+#     hyperparameter_tuning(model_name, X, y, param_grid)
+
+for model_name in ['ElasticNet']:
     hyperparameter_tuning(model_name, X, y, param_grid)
+
+    # 'LGBM', 'GBM', 'ADA', 'SVM', 'KNN', 'NB', 'ElasticNet'

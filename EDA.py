@@ -4,17 +4,80 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
+def plot_feature_distribution(df, output_dir='eda_outputs'):
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Plot Temperature Distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df['temparature'], kde=True, color='blue')
+    plt.title('Temperature Distribution')
+    plt.xlabel('Temperature (°C)')
+    plt.ylabel('Frequency')
+    plt.savefig(f"{output_dir}/temperature_distribution.png")
+    plt.close()
+
+    # Plot Pressure Distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df['pressure'], kde=True, color='red')
+    plt.title('Pressure Distribution')
+    plt.xlabel('Pressure (hPa)')
+    plt.ylabel('Frequency')
+    plt.savefig(f"{output_dir}/pressure_distribution.png")
+    plt.close()
+
+    # Plot Cloud Coverage Distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df['cloud'], kde=True, color='purple')
+    plt.title('Cloud Coverage Distribution')
+    plt.xlabel('Cloud Coverage (%)')
+    plt.ylabel('Frequency')
+    plt.savefig(f"{output_dir}/cloud_coverage_distribution.png")
+    plt.close()
+
+    # Plot Humidity Distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df['humidity'], kde=True, color='green')
+    plt.title('Humidity Distribution')
+    plt.xlabel('Humidity (%)')
+    plt.ylabel('Frequency')
+    plt.savefig(f"{output_dir}/humidity_distribution.png")
+    plt.close()
+
+
+
 # 创建图表保存目录
 output_dir = 'eda_outputs'
 os.makedirs(output_dir, exist_ok=True)
 
 # 读取数据
 df = pd.read_csv('data/hongkong.csv')
+plot_feature_distribution(df)
 
 # ===== Step 1: 缺失值统计 =====
 missing_values = df.isnull().sum()
 missing_values.to_csv(f"{output_dir}/missing_values.csv")
 print("✔ 缺失值统计已保存：missing_values.csv")
+
+# 创建一个函数来统计每列中 'Minor'、'-' 和空缺的数量
+def count_special_values(df):
+    special_values = ['Minor', '-']  # 需要检查的特殊值
+    count_dict = {}
+
+    for col in df.columns:
+        col_counts = {value: (df[col] == value).sum() for value in special_values}
+        col_counts['NaN'] = df[col].isna().sum()  # 统计NaN值
+        count_dict[col] = col_counts
+
+    return count_dict
+
+# 统计每一列的 'Minor'、'-' 和空缺值
+special_value_counts = count_special_values(df)
+
+# 将结果转换为 DataFrame 方便查看
+special_value_df = pd.DataFrame(special_value_counts).T
+print(special_value_df)
+
 
 # ===== Step 2: 查看 object 类型列的唯一值 =====
 object_summary = {}
@@ -134,4 +197,30 @@ plt.savefig(f"{output_dir}/rainfall_level_distribution.png")
 plt.show()
 
 
+# feature distribution
+# 读取数据（假设已经处理好并保存）
+X = np.load("data/processed_X_binary.npy")
+y = np.load("data/processed_y_binary.npy")
 
+# 将 X 转换为 DataFrame 以便于列名的使用
+# 根据之前的列命名规则，将特征列命名为 feature_0, feature_1, ...
+columns = [f"feature_{i}" for i in range(X.shape[1])]
+X_df = pd.DataFrame(X, columns=columns)
+
+# 设置绘图风格
+sns.set(style="whitegrid")
+
+# 创建输出目录
+output_dir = 'eda_outputs'
+os.makedirs(output_dir, exist_ok=True)
+
+
+# 4. Rainfall Level (Binary Classification)
+plt.figure(figsize=(7, 5))
+sns.countplot(x=y, palette='coolwarm')
+plt.title('Rainfall Level Distribution')
+plt.xlabel('Rainfall')
+plt.ylabel('Count')
+plt.xticks([0, 1], ['No Rain', 'Rain'])
+plt.savefig(os.path.join(output_dir, 'rainfall_level_distribution.png'))
+plt.close()

@@ -1,7 +1,8 @@
-from sklearn.ensemble import StackingClassifier
+from sklearn.ensemble import StackingClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -19,11 +20,11 @@ def build_stacking_model():
         ('rf', RandomForestClassifier(n_estimators=50, max_depth=10, min_samples_split=5,
                                       min_samples_leaf=2, random_state=42)),
         ('catboost', CatBoostClassifier(depth=3, iterations=200, learning_rate=0.1, verbose=0)),
-        ('logreg', LogisticRegression(C=1, solver='liblinear', max_iter=1000))
+        ('ada', AdaBoostClassifier(n_estimators=200, learning_rate=1.0)),
+        ('logreg', LogisticRegression(C=1, solver='liblinear', max_iter=1000)),
+        ('nb', GaussianNB(var_smoothing=1e-07))
     ]
-
-    # 定义元模型（可以是Logistic Regression，ElasticNet等）
-    meta_model = LogisticRegression(max_iter=1000)
+    meta_model = LogisticRegression(C=1, solver='liblinear', max_iter=1000)
 
     # 创建StackingClassifier
     stacking_model = StackingClassifier(estimators=base_learners, final_estimator=meta_model)
